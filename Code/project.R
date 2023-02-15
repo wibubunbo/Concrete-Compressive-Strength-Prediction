@@ -1,11 +1,3 @@
----
-title: "R Notebook"
-output:
-  pdf_document: default
-  html_notebook: default
----
-
-```{r}
 library(ggplot2)
 library(tidyr)
 library(corrplot)
@@ -20,55 +12,40 @@ library(leaps)
 library(gbm)
 library(BART)
 library(MLmetrics)
-```
 
-```{r}
 # Loading the dataset
 df <- read.csv("D:\\wibubunbo\\R\\Concrete_Data.csv")
 colnames(df) <- c("cement", "blast_furnace_slag", "fly_ash", "water", "superplasticizer", "coarse_agg", "fine_agg", "age", "strength")
 head(df)
-```
 
-```{r}
 # Checking the duplications in our dataset
 sum(duplicated(df))
 df <- df[!duplicated(df), ]
-```
 
-```{r}
 # Find the observations with same predictors value but different target value
 rownames(df) <- 1:nrow(df) # reset the index of our dataset
 check <- df[, -9]
 special_rows <- as.numeric(rownames(check[duplicated(check) | duplicated(check, fromLast = TRUE), ]))
 head(df[special_rows, ])
-```
 
-```{r}
 # Calculate the mean of these observations and merge it into our dataset
 mean_df_rows <- aggregate(strength~., data = df, subset = special_rows, mean)
 df <- df[-special_rows, ]
 df <- rbind(df, mean_df_rows)
 rownames(df) <- 1:nrow(df) #  reset the index of our dataset
-df
-```
 
-```{r}
 # Spliting our dataset to training and test dataset
 set.seed(1)
 train <- sample(dim(df)[1], dim(df)[1] * 0.8)
 df.train <- df[train, ]
 df.test <- df[-train, ]
-```
 
-```{r}
 # Create X and y
 X_train <- df.train[, -9]
 y_train <- df.train$strength
 X_test <- df.test[, -9]
 y_test <- df.test$strength
-```
 
-```{r}
 # Distribution plots of all columns
 dl <- df %>%
   pivot_longer(colnames(df)) %>% 
@@ -78,31 +55,23 @@ ggplot(dl, aes(x = value)) +
   geom_histogram(aes(y = ..density..), col = "gray") + 
   geom_density(col = "lightblue", size = 1) + 
   facet_wrap(~ name, scales = "free")
-```
 
-```{r}
 # Correlation matrix of all features and target strength
 corrplot(cor(df), method = "number", number.cex = 0.8)
-```
 
-```{r}
 # Multiple Linear Regression
 lm.fit <- lm(strength~., data = df.train)
 print(summary(lm.fit))
 # Check VIF values of lm.fit
 v0 <- data.frame(vif(lm.fit))
 v0
-```
 
-```{r}
 # Remove coarse_agg and fine_agg features and do OLS again
 lm.fit1 <- lm(strength~cement+blast_furnace_slag+fly_ash+water+superplasticizer+age, data = df.train)
 summary(lm.fit1)
 v1 <- data.frame(vif(lm.fit1))
 v1
-```
 
-```{r}
 # Calculate train and test RMSE + R^2 score of OLS
 y_train_pred <- predict(lm.fit1, df.train)
 y_test_pred <- predict(lm.fit1, df.test)
@@ -110,9 +79,7 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 predict.regsubsets = function(object, newdata, id, ...) {
     form = as.formula(object$call[[2]])
     mat = model.matrix(form, newdata)
@@ -134,20 +101,14 @@ for(j in 1:k) {
 }
 mean.cv.errors <- apply(cv.errors, 2, mean)
 which.min(mean.cv.errors) # Best subset selection result
-```
 
-```{r}
 plot(mean.cv.errors , type = "b", xlab = "Number of Features", ylab = "Mean Cross-validation Errors")
 text(mean.cv.errors, labels=round(mean.cv.errors, 2), pos = 3)
-```
 
-```{r}
 # Coefficients of best 6-variable model
 reg.best <- regsubsets(strength~., data = df.train, nvmax = 8)
 coef(reg.best, 6)
-```
 
-```{r}
 # The LASSO
 set.seed(1)
 train.matrix <- model.matrix(strength~., data = df.train)
@@ -165,16 +126,12 @@ print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
 # Find coefficients estimate of best model
 predict(lasso.mod, type = "coefficients", s = bestlam.lasso)
-```
 
-```{r}
 # Check the coefficient estimates of the LASSO
 predict(lasso.mod, newx = test_mat, type = "coefficients", s = bestlam.lasso)
-```
 
-## WITHOUT FEATURES SELECTION
+# WITHOUT FEATURES SELECTION
 
-```{r}
 # Regression Decision Trees
 set.seed(1)
 tree.strength <- tree(strength~., df.train)
@@ -185,9 +142,7 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 # Bagging
 set.seed(1)
 bag.strength <- randomForest(strength~., data = df.train, mtry = 8, importance = TRUE)
@@ -198,9 +153,7 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-``` {r}
 # Random Forest
 set.seed(1)
 rf.strength <- randomForest(strength~., data = df.train, mtry = 5, importance = TRUE)
@@ -211,16 +164,11 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 # Features Importance of Random Forest
 importance(rf.strength)
 varImpPlot(rf.strength)
-```
 
-
-```{r}
 # Boosting
 set.seed(1)
 boost.strength <- gbm(strength~., data = df.train, distribution = "gaussian", n.trees = 500, interaction.depth = 2)
@@ -231,9 +179,7 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 # Features Importance of Boosting
 names(df.train)[names(df.train) == "blast_furnace_slag"] <- "bfslag"
 names(df.train)[names(df.train) == "superplasticizer"] <- "SPs"
@@ -241,9 +187,7 @@ boost.strength <- gbm(strength~., data = df.train, distribution = "gaussian", n.
 summary(boost.strength)
 names(df.train)[names(df.train) == "bfslag"] <- "blast_furnace_slag"
 names(df.train)[names(df.train) == "SPs"] <- "superplasticizer"
-```
 
-```{r}
 # BART  
 set.seed(1)
 bart.fit <- gbart(df.train[, 1:8], df.train$strength, x.test = df.test[, 1:8])
@@ -254,17 +198,13 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 # BART check how many times each variable appeared in the collection of trees
 ord <- order(bart.fit$varcount.mean , decreasing = T)
 bart.fit$varcount.mean[ord]
-```
 
-## WITH FEATURES SELECTION
+# WITH FEATURES SELECTION
 
-```{r}
 # Regression Decision Trees
 set.seed(1)
 tree.strength <- tree(strength~cement+blast_furnace_slag+fly_ash+water+superplasticizer+age, df.train)
@@ -275,9 +215,7 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 # Bagging
 set.seed(1)
 bag.strength <- randomForest(strength~cement+blast_furnace_slag+fly_ash+water+superplasticizer+age, data = df.train, mtry = 6, importance = TRUE)
@@ -288,9 +226,7 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-``` {r}
 # Random Forest
 set.seed(1)
 rf.strength <- randomForest(strength~cement+blast_furnace_slag+fly_ash+water+superplasticizer+age, data = df.train, mtry = 4, importance = TRUE)
@@ -301,16 +237,11 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 # Features Importance of Random Forest
 importance(rf.strength)
 varImpPlot(rf.strength)
-```
 
-
-```{r}
 # Boosting
 set.seed(1)
 boost.strength <- gbm(strength~cement+blast_furnace_slag+fly_ash+water+superplasticizer+age, data = df.train, distribution = "gaussian", n.trees = 500, interaction.depth = 2)
@@ -321,9 +252,7 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 # Features Importance of Boosting
 names(df.train)[names(df.train) == "blast_furnace_slag"] <- "bfslag"
 names(df.train)[names(df.train) == "superplasticizer"] <- "SPs"
@@ -331,9 +260,7 @@ boost.strength <- gbm(strength~cement+bfslag+fly_ash+water+SPs+age, data = df.tr
 summary(boost.strength)
 names(df.train)[names(df.train) == "bfslag"] <- "blast_furnace_slag"
 names(df.train)[names(df.train) == "SPs"] <- "superplasticizer"
-```
 
-```{r}
 # BART  
 set.seed(1)
 bart.fit <- gbart(df.train[, c("cement", "blast_furnace_slag", "fly_ash", "water", "superplasticizer", "age")], df.train$strength, x.test = df.test[, c("cement", "blast_furnace_slag", "fly_ash", "water", "superplasticizer", "age")])
@@ -344,10 +271,7 @@ print(RMSE(y_train, y_train_pred)) # Train RMSE
 print(R2_Score(y_train_pred, y_train)) # Train R^2 score
 print(RMSE(y_test, y_test_pred)) # Test RMSE
 print(R2_Score(y_test_pred, y_test)) # Test R^2 score
-```
 
-```{r}
 # BART check how many times each variable appeared in the collection of trees
 ord <- order(bart.fit$varcount.mean , decreasing = T)
 bart.fit$varcount.mean[ord]
-```
